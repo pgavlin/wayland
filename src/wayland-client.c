@@ -39,6 +39,9 @@
 #include <ctype.h>
 #include <fcntl.h>
 #include <poll.h>
+#ifdef __APPLE__
+#include <epoll-shim/detail/poll.h>
+#endif
 #include <pthread.h>
 
 #include "wayland-util.h"

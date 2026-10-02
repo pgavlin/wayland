@@ -75,17 +75,33 @@ wl_os_socket_cloexec(int domain, int type, int protocol)
 {
 	int fd;
 
+#ifdef SOCK_CLOEXEC
 	fd = wl_socket(domain, type | SOCK_CLOEXEC, protocol);
 	if (fd >= 0)
 		return fd;
 	if (errno != EINVAL)
 		return -1;
+#endif
 
 	fd = wl_socket(domain, type, protocol);
 	return set_cloexec_or_close(fd);
 }
 
-#if defined(__FreeBSD__)
+#if defined(__APPLE__)
+int
+wl_os_socket_peercred(int sockfd, uid_t *uid, gid_t *gid, pid_t *pid)
+{
+	pid_t peer_pid;
+	socklen_t len = sizeof(peer_pid);
+
+	if (getpeereid(sockfd, uid, gid) < 0)
+		return -1;
+	if (getsockopt(sockfd, SOL_LOCAL, LOCAL_PEERPID, &peer_pid, &len) < 0)
+		return -1;
+	*pid = peer_pid;
+	return 0;
+}
+#elif defined(__FreeBSD__)
 int
 wl_os_socket_peercred(int sockfd, uid_t *uid, gid_t *gid, pid_t *pid)
 {
@@ -186,7 +202,7 @@ wl_os_recvmsg_cloexec(int sockfd, struct msghdr *msg, int flags)
 	 * fix (https://cgit.freebsd.org/src/commit/?id=6ceacebdf52211).
 	 */
 #pragma message("Using fallback directly since MSG_CMSG_CLOEXEC is broken.")
-#else
+#elif defined(MSG_CMSG_CLOEXEC)
 	ssize_t len;
 
 	len = wl_recvmsg(sockfd, msg, flags | MSG_CMSG_CLOEXEC);

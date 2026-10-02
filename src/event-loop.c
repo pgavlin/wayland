@@ -36,6 +36,12 @@
 #include <sys/un.h>
 #include <sys/epoll.h>
 #include <sys/signalfd.h>
+#ifdef __APPLE__
+struct itimerspec {
+	struct timespec it_interval;
+	struct timespec it_value;
+};
+#endif
 #include <sys/timerfd.h>
 #include <unistd.h>
 #include "timespec-util.h"
